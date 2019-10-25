@@ -1,0 +1,74 @@
+import { all, takeLatest, put, call } from 'redux-saga/effects';
+import { toast } from 'react-toastify';
+
+import api from '~/services/api';
+import history from '~/services/history';
+
+import { getMeetupsSuccess, failure, createMeetupSuccess } from './actions';
+
+export function* getMeetups() {
+  try {
+    const res = yield call(api.get, 'organizing');
+
+    yield put(getMeetupsSuccess(res.data));
+  } catch (err) {
+    const { error } = err.response.data;
+    const msg = error ? error.message : 'Falha ao carregar os seus meetups';
+
+    toast.error(msg, 2500);
+    yield put(failure());
+  }
+}
+
+export function* cancelMeetup({ payload }) {
+  try {
+    yield call(api.delete, `meetups/${payload.id}`);
+
+    toast.success('O seu meetup foi cancelado!', 2500);
+    history.push('/dashboard');
+  } catch (err) {
+    const { error } = err.response.data;
+    const msg = error ? error.message : 'Falha ao cancelar seu meetup';
+
+    toast.error(msg, 2500);
+    yield put(failure());
+  }
+}
+
+export function* createMeetup({ payload }) {
+  try {
+    const res = yield call(api.post, 'meetups', payload);
+
+    toast.success('Seu meetup foi criado com sucesso!', 2500);
+    yield put(createMeetupSuccess(res.data));
+
+    history.push('/dashboard');
+  } catch (err) {
+    const { error } = err.response.data;
+    const msg = error || 'Erro ao criar, verifique seus dados!';
+
+    toast.error(msg, 2500);
+  }
+}
+
+export function* updateMeetup({ payload }) {
+  try {
+    yield call(api.put, `meetups/${payload.id}`, payload.data);
+
+    toast.success('Seu meetup foi atualizado com sucesso!', 2500);
+
+    history.push('/dashboard');
+  } catch (err) {
+    const { error } = err.response.data;
+    const msg = error || 'Erro ao atualizar, verifique seus dados!';
+
+    toast.error(msg, 2500);
+  }
+}
+
+export default all([
+  takeLatest('@managing/GET_MEETUPS_REQUEST', getMeetups),
+  takeLatest('@managing/CANCEL_MEETUPS_REQUEST', cancelMeetup),
+  takeLatest('@managing/CREATE_MEETUP_REQUEST', createMeetup),
+  takeLatest('@managing/UPDATE_MEETUP_REQUEST', updateMeetup),
+]);
